@@ -7,6 +7,14 @@ public class WeatherResponse {
     @SerializedName("name")
     public String cityName;
 
+    @SerializedName("coord")
+    public Coord coord;
+
+    public static class Coord {
+        @SerializedName("lat") public double lat;
+        @SerializedName("lon") public double lon;
+    }
+
     @SerializedName("weather")
     public List<Weather> weather;
 

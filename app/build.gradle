@@ -17,7 +17,8 @@ android {
         // Đọc file local.properties để giấu Key
         Properties properties = new Properties()
         properties.load(project.rootProject.file('local.properties').newDataInputStream())
-        buildConfigField "String", "WEATHER_API_KEY", properties.getProperty("WEATHER_API_KEY")
+        def apiKey = properties.getProperty("WEATHER_API_KEY") ?: ""
+        buildConfigField "String", "WEATHER_API_KEY", "\"${apiKey}\""
     }
 
     buildFeatures {

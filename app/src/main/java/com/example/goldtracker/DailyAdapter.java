@@ -35,6 +35,7 @@ public class DailyAdapter extends RecyclerView.Adapter<DailyAdapter.DailyViewHol
 
         holder.tvDayName.setText(weather.getDayName());
         holder.tvMinMaxTemp.setText(weather.getMinMaxTemp());
+        holder.tvRainProb.setText(weather.getRainProb());
 
         int iconId = WeatherUtils.getLocalIcon(weather.getIconCode());
         holder.imgIcon.setImageResource(iconId);

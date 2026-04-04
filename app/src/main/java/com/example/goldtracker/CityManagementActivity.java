@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -90,15 +91,20 @@ public class CityManagementActivity extends AppCompatActivity {
                             currentSearchedCity = weatherData.cityName;
 
                             tvCityNameItem.setText(currentSearchedCity);
-                            tvCityTempItem.setText(Math.round(weatherData.main.temp) + "°");
+                            tvCityTempItem.setText(Math.round(weatherData.main.temp) + "°C");
                             etSearchCity.setText("");
+
+                            // Hiện card kết quả sau khi tìm thấy
+                            layoutCityResult.setVisibility(View.VISIBLE);
                         } else {
-                            Toast.makeText(CityManagementActivity.this, "Không tìm thấy!", Toast.LENGTH_SHORT).show();
+                            layoutCityResult.setVisibility(View.GONE);
+                            Toast.makeText(CityManagementActivity.this, "Không tìm thấy thành phố!", Toast.LENGTH_SHORT).show();
                         }
                     }
 
                     @Override
                     public void onFailure(Call<WeatherResponse> call, Throwable t) {
+                        layoutCityResult.setVisibility(View.GONE);
                         Toast.makeText(CityManagementActivity.this, "Lỗi kết nối mạng!", Toast.LENGTH_SHORT).show();
                     }
                 });
