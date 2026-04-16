@@ -21,6 +21,9 @@
             android:name=".CityManagementActivity"
             android:exported="false" />
         <activity
+            android:name=".WeatherMapActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

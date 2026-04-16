@@ -8,7 +8,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -45,6 +44,10 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView rvHourly, rvDaily;
     private WebView wvWeatherMap;
     private FusedLocationProviderClient fusedLocationClient;
+
+    // Tọa độ hiện tại để truyền sang màn hình bản đồ full screen
+    private double currentLat = 10.8;
+    private double currentLon = 106.7;
 
     private static final int LOCATION_PERMISSION_CODE = 102;
     private static final int NOTIFICATION_PERMISSION_CODE = 101;
@@ -88,16 +91,27 @@ public class MainActivity extends AppCompatActivity {
         tvRain = findViewById(R.id.tvRain);
         imgCurrentWeather = findViewById(R.id.imgCurrentWeather);
         findViewById(R.id.ivMenu).setOnClickListener(v -> cityLauncher.launch(new Intent(this, CityManagementActivity.class)));
+        findViewById(R.id.ivOpenMap).setOnClickListener(v -> openFullMap());
 
-        // Khởi tạo WebView bản đồ thời tiết
+        // Khởi tạo WebView bản đồ thời tiết (preview)
         wvWeatherMap = findViewById(R.id.wvWeatherMap);
-        wvWeatherMap.getSettings().setJavaScriptEnabled(true);
-        wvWeatherMap.getSettings().setDomStorageEnabled(true);
-        wvWeatherMap.getSettings().setUseWideViewPort(true);
-        wvWeatherMap.getSettings().setLoadWithOverviewMode(true);
-        wvWeatherMap.setWebViewClient(new WebViewClient());
+        WeatherMapHelper.setupWebView(wvWeatherMap);
+        // Chặn mọi tương tác trên preview - chạm vào sẽ mở màn hình full
+        wvWeatherMap.setOnTouchListener((v, event) -> {
+            if (event.getAction() == android.view.MotionEvent.ACTION_UP) {
+                openFullMap();
+            }
+            return true;
+        });
         // Tải bản đồ mặc định căn giữa Hồ Chí Minh
-        loadWeatherMap(10.8, 106.7);
+        loadWeatherMap(currentLat, currentLon);
+    }
+
+    private void openFullMap() {
+        Intent intent = new Intent(this, WeatherMapActivity.class);
+        intent.putExtra(WeatherMapActivity.EXTRA_LAT, currentLat);
+        intent.putExtra(WeatherMapActivity.EXTRA_LON, currentLon);
+        startActivity(intent);
     }
 
     private void setupRecyclerViews() {
@@ -161,55 +175,18 @@ public class MainActivity extends AppCompatActivity {
             imgCurrentWeather.setImageResource(beautifulIconResId);
         }
 
-        // Tải bản đồ thời tiết Windy căn giữa vị trí hiện tại
+        // Lưu tọa độ và tải bản đồ thời tiết căn giữa vị trí hiện tại
         if (data.coord != null) {
-            loadWeatherMap(data.coord.lat, data.coord.lon);
+            currentLat = data.coord.lat;
+            currentLon = data.coord.lon;
+            loadWeatherMap(currentLat, currentLon);
         }
 
         checkAndShowWeatherAlert(data);
     }
 
     private void loadWeatherMap(double lat, double lon) {
-        String html = "<!DOCTYPE html><html><head>"
-                + "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
-                + "<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>"
-                + "<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>"
-                + "<style>"
-                + "body{margin:0;padding:0;font-family:sans-serif;background:#0B132B;}"
-                + "#controls{display:flex;flex-wrap:wrap;background:#0B132B;padding:5px;gap:4px;}"
-                + ".btn{flex:1;min-width:55px;padding:6px 2px;border:none;border-radius:8px;"
-                + "     background:#1E2A45;color:#90A4AE;font-size:11px;cursor:pointer;}"
-                + ".btn.active{background:#E8614C;color:#fff;font-weight:bold;}"
-                + "#map{width:100%;height:calc(100vh - 46px);}"
-                + "</style>"
-                + "</head><body>"
-                + "<div id='controls'>"
-                + "<button class='btn active' onclick='setLayer(\"temp_new\",this)'>🌡 Nhiệt độ</button>"
-                + "<button class='btn' onclick='setLayer(\"pressure_new\",this)'>🔵 Áp suất</button>"
-                + "<button class='btn' onclick='setLayer(\"wind_new\",this)'>💨 Gió</button>"
-                + "<button class='btn' onclick='setLayer(\"precipitation_new\",this)'>🌧 Mưa</button>"
-                + "<button class='btn' onclick='setLayer(\"clouds_new\",this)'>☁️ Mây</button>"
-                + "</div>"
-                + "<div id='map'></div>"
-                + "<script>"
-                + "var map=L.map('map',{zoomControl:true}).setView([" + lat + "," + lon + "],5);"
-                + "L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',"
-                + "  {attribution:'© CartoDB',subdomains:'abcd'}).addTo(map);"
-                + "var labelLayer=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',"
-                + "  {subdomains:'abcd',zIndex:1000}).addTo(map);"
-                + "var weatherLayer=null;"
-                + "function setLayer(layer,btn){"
-                + "  document.querySelectorAll('.btn').forEach(b=>b.classList.remove('active'));"
-                + "  btn.classList.add('active');"
-                + "  if(weatherLayer) map.removeLayer(weatherLayer);"
-                + "  weatherLayer=L.tileLayer("
-                + "    'https://tile.openweathermap.org/map/'+layer+'/{z}/{x}/{y}.png?appid=" + API_KEY + "',"
-                + "    {opacity:0.85,attribution:'© OpenWeatherMap',zIndex:500}).addTo(map);"
-                + "  labelLayer.bringToFront();"
-                + "}"
-                + "setLayer('temp_new',document.querySelector('.btn.active'));"
-                + "</script></body></html>";
-        wvWeatherMap.loadDataWithBaseURL("https://openweathermap.org", html, "text/html", "UTF-8", null);
+        WeatherMapHelper.load(wvWeatherMap, lat, lon, API_KEY);
     }
 
     private void processForecastData(List<ForecastResponse.ForecastItem> list) {
